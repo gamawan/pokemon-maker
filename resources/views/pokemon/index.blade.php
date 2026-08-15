@@ -458,155 +458,158 @@
 						</div>
 					</div>
 					
-					<!-- TABLE VIEW MODE -->
-					<div x-cloak x-show="viewMode === 'table'" class="overflow-x-auto">
-						<table class="w-full text-left border-collapse">
-							<thead>
-								<tr class="bg-slate-900/80 text-[10px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700">
-									<!-- 1. Drag Handle Header Column -->
-									<th class="py-2 px-1 text-center w-6"></th>
-									
-									<!-- 2. Slot Number Header Column -->
-									<th class="py-2 px-3 text-center w-16">
-										<a href="{{ sortLink('slot', $sortBy, $sortDir) }}" class="hover:text-white inline-flex items-center gap-0.5">
-											SLOT {!! $sortBy === 'slot' ? ($sortDir === 'asc' ? '▲' : '▼') : '' !!}
-										</a>
-									</th>
-									
-									<!-- 3. Database ID Header Column -->
-									<th class="py-2 px-3 text-center w-12">
-										<a href="{{ sortLink('id', $sortBy, $sortDir) }}" class="hover:text-white inline-flex items-center gap-0.5">
-											ID {!! $sortBy === 'id' ? ($sortDir === 'asc' ? '▲' : '▼') : '' !!}
-										</a>
-									</th>
-									
-									<th class="py-2 px-3 text-center w-14">Image</th>
-									<th class="py-2 px-3">
-										<a href="{{ sortLink('name', $sortBy, $sortDir) }}" class="hover:text-white inline-flex items-center gap-0.5">
-											Name {!! $sortBy === 'name' ? ($sortDir === 'asc' ? '▲' : '▼') : '' !!}
-										</a>
-									</th>
-									<th class="py-2 px-3">
-										<a href="{{ sortLink('species', $sortBy, $sortDir) }}" class="hover:text-white inline-flex items-center gap-0.5">
-											Main Species {!! $sortBy === 'species' ? ($sortDir === 'asc' ? '▲' : '▼') : '' !!}
-										</a>
-									</th>
-									<th class="py-2 px-3 text-center">
-										<a href="{{ sortLink('evo_number', $sortBy, $sortDir) }}" class="hover:text-white inline-flex items-center gap-0.5">
-											Evo # {!! $sortBy === 'evo_number' ? ($sortDir === 'asc' ? '▲' : '▼') : '' !!}
-										</a>
-									</th>
-									<th class="py-2 px-3">Inspiration</th>
-									<th class="py-2 px-3">
-										<a href="{{ sortLink('type1', $sortBy, $sortDir) }}" class="hover:text-white inline-flex items-center gap-0.5">
-											Type 1 {!! $sortBy === 'type1' ? ($sortDir === 'asc' ? '▲' : '▼') : '' !!}
-										</a>
-									</th>
-									<th class="py-2 px-3">
-										<a href="{{ sortLink('type2', $sortBy, $sortDir) }}" class="hover:text-white inline-flex items-center gap-0.5">
-											Type 2 {!! $sortBy === 'type2' ? ($sortDir === 'asc' ? '▲' : '▼') : '' !!}
-										</a>
-									</th>
-									<th class="py-2 px-3">Description</th>
-									<th class="py-2 px-3 text-center">Actions</th>
-								</tr>
-							</thead>
-							<tbody x-init="initSortable($el)" class="divide-y divide-slate-700/50 text-xs">
-								@forelse($pokemons as $pokemon)
-								<tr data-id="{{ $pokemon->id }}" class="hover:bg-slate-700/30 transition-colors duration-150">
-									
-									<!-- 1. Drag Handle -->
-									<td class="py-2 px-1 text-center align-middle">
-										<span class="drag-handle text-slate-500 hover:text-slate-200 cursor-grab active:cursor-grabbing select-none text-sm px-1">
-											⋮⋮
-										</span>
-									</td>
-									
-									<!-- 2. Slot Number Jumper Button -->
-									<td class="py-2 px-3 text-center font-mono font-bold text-slate-400 text-[11px]">
-										<button type="button" 
-										@click="promptMoveSlot({{ json_encode($pokemon) }})" 
-										class="bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-300 px-2 py-0.5 rounded border border-slate-700 transition cursor-pointer"
-										title="Click to move to specific slot / page">
-											#{{ sprintf('%03d', $pokemon->slot ?: $loop->iteration) }} ↗
-										</button>
-									</td>
-									
-									<!-- 3. Database Raw ID -->
-									<td class="py-2 px-3 text-center font-mono text-slate-500 text-[10px]">
-										{{ $pokemon->id }}
-									</td>
-									
-									<!-- 4. Image -->
-									<td class="py-2 px-3 text-center">
-										<img src="{{ $pokemon->image_path ?: asset('images/placeholder.png') }}" 
-										alt="{{ $pokemon->name }}" 
-										class="w-8 h-8 object-cover rounded-md border border-slate-700 mx-auto" 
-										onerror="this.onerror=null; this.src='{{ asset('images/placeholder.png') }}';">
-									</td>
-									
-									<!-- 5. Name -->
-									<td class="py-2 px-3 font-bold text-white tracking-wide text-[11px]">{{ $pokemon->name }}</td>
-									
-									<!-- 6. Main Species -->
-									<td class="py-2 px-3 text-indigo-300 font-semibold text-[11px]">{{ $pokemon->species ?? '-' }}</td>
-									
-									<!-- 7. Evo Number -->
-									<td class="py-2 px-3 text-center font-mono text-slate-300 text-[11px]">{{ $pokemon->evo_number ?? '-' }}</td>
-									
-									<!-- 8. Inspiration -->
-									<td class="py-2 px-3 text-slate-300 text-[11px] min-w-[120px] max-w-xs whitespace-normal break-words">{{ $pokemon->insp ?? '-' }}</td>
-									
-									<!-- 9. Type 1 -->
-									<td class="py-2 px-3">
-										<span class="inline-block px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wider border text-white"
-										style="background-color: {{ ($typeMap[$pokemon->type1]->color_hex ?? '#64748b') }}20; border-color: {{ ($typeMap[$pokemon->type1]->color_hex ?? '#64748b') }}60; color: {{ $typeMap[$pokemon->type1]->color_hex ?? '#ffffff' }};">
-											{{ $pokemon->type1 }}
-										</span>
-									</td>
-									
-									<!-- 10. Type 2 -->
-									<td class="py-2 px-3">
-										@if($pokemon->type2)
-										@php $t2 = strtolower($pokemon->type2); @endphp
-										<span class="inline-block px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wider border {{ $types[$t2]['class'] ?? 'bg-slate-700 text-slate-300 border-slate-600' }}">
-											{{ $pokemon->type2 }}
-										</span>
-										@else
-										<span class="text-slate-500 text-[10px]">-</span>
-										@endif
-									</td>
-									
-									<!-- 11. Description -->
-									<td class="py-2 px-3 text-slate-400 text-[11px] min-w-[180px] max-w-xs whitespace-normal break-words">{{ $pokemon->description ?? '-' }}</td>
-									
-									<!-- 12. Actions -->
-									<td class="py-2 px-3 text-center whitespace-nowrap">
-										<div class="flex items-center justify-center gap-1.5">
-											<button type="button" @click="setEditData({{ json_encode($pokemon) }})" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-medium transition-all cursor-pointer">
-												Edit
-											</button>
-											
-											<form action="{{ route('pokemon.destroy', $pokemon->id) }}" method="POST" onsubmit="return confirm('Delete {{ $pokemon->name }} permanently?');">
-												@csrf
-												@method('DELETE')
-												<button type="submit" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded text-[10px] font-medium transition-all cursor-pointer">
-													Delete
-												</button>
-											</form>
-										</div>
-									</td>
-								</tr>
-								@empty
-								<tr>
-									<td colspan="12" class="py-8 text-center text-slate-500 text-xs">
-										No Pokémon entries found. Click "+ Add Pokémon" to create one!
-									</td>
-								</tr>
-								@endforelse
-							</tbody>
-						</table>
+<!-- TABLE VIEW MODE (COMPACT + FULL DESCRIPTION) -->
+<div x-cloak x-show="viewMode === 'table'" class="overflow-x-auto">
+	<table class="w-full text-left border-collapse">
+		<thead>
+			<tr class="bg-slate-900/90 text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-700/80">
+				<!-- 1. Drag Handle -->
+				<th class="py-1 px-1 text-center w-5"></th>
+				
+				<!-- 2. Slot Number Jumper -->
+				<th class="py-1 px-1.5 text-center w-14">
+					<a href="{{ sortLink('slot', $sortBy, $sortDir) }}" class="hover:text-white inline-flex items-center gap-0.5">
+						SLOT {!! $sortBy === 'slot' ? ($sortDir === 'asc' ? '▲' : '▼') : '' !!}
+					</a>
+				</th>
+
+				<!-- 3. Database Raw ID -->
+				<th class="py-1 px-1.5 text-center w-10">
+					<a href="{{ sortLink('id', $sortBy, $sortDir) }}" class="hover:text-white inline-flex items-center gap-0.5">
+						ID {!! $sortBy === 'id' ? ($sortDir === 'asc' ? '▲' : '▼') : '' !!}
+					</a>
+				</th>
+
+				<th class="py-1 px-1.5 text-center w-10">Image</th>
+				<th class="py-1 px-2">
+					<a href="{{ sortLink('name', $sortBy, $sortDir) }}" class="hover:text-white inline-flex items-center gap-0.5">
+						Name {!! $sortBy === 'name' ? ($sortDir === 'asc' ? '▲' : '▼') : '' !!}
+					</a>
+				</th>
+				<th class="py-1 px-2">
+					<a href="{{ sortLink('species', $sortBy, $sortDir) }}" class="hover:text-white inline-flex items-center gap-0.5">
+						Species {!! $sortBy === 'species' ? ($sortDir === 'asc' ? '▲' : '▼') : '' !!}
+					</a>
+				</th>
+				<th class="py-1 px-1.5 text-center">
+					<a href="{{ sortLink('evo_number', $sortBy, $sortDir) }}" class="hover:text-white inline-flex items-center gap-0.5">
+						Evo # {!! $sortBy === 'evo_number' ? ($sortDir === 'asc' ? '▲' : '▼') : '' !!}
+					</a>
+				</th>
+				<th class="py-1 px-2">Inspiration</th>
+				<th class="py-1 px-1.5">
+					<a href="{{ sortLink('type1', $sortBy, $sortDir) }}" class="hover:text-white inline-flex items-center gap-0.5">
+						Type 1 {!! $sortBy === 'type1' ? ($sortDir === 'asc' ? '▲' : '▼') : '' !!}
+					</a>
+				</th>
+				<th class="py-1 px-1.5">
+					<a href="{{ sortLink('type2', $sortBy, $sortDir) }}" class="hover:text-white inline-flex items-center gap-0.5">
+						Type 2 {!! $sortBy === 'type2' ? ($sortDir === 'asc' ? '▲' : '▼') : '' !!}
+					</a>
+				</th>
+				<!-- Description Header: Allowed to expand dynamically -->
+				<th class="py-1 px-2.5">Description</th>
+				<th class="py-1 px-2 text-center w-20">Actions</th>
+			</tr>
+		</thead>
+		<tbody x-init="initSortable($el)" class="divide-y divide-slate-800/60 text-[11px]">
+			@forelse($pokemons as $pokemon)
+			<tr data-id="{{ $pokemon->id }}" class="hover:bg-slate-700/20 transition-colors duration-150">
+				
+				<!-- 1. Drag Handle -->
+				<td class="py-1 px-0.5 text-center align-middle">
+					<span class="drag-handle text-slate-500 hover:text-slate-200 cursor-grab active:cursor-grabbing select-none text-xs px-1">
+						⋮⋮
+					</span>
+				</td>
+
+				<!-- 2. Slot Number Jumper Button -->
+				<td class="py-1 px-1.5 text-center font-mono font-bold text-slate-400 text-[10px] align-middle">
+					<button type="button" 
+							@click="promptMoveSlot({{ json_encode($pokemon) }})" 
+							class="bg-slate-800/80 hover:bg-indigo-600 hover:text-white text-slate-300 px-1.5 py-0.5 rounded border border-slate-700/70 transition cursor-pointer"
+							title="Click to move to specific slot / page">
+						#{{ sprintf('%03d', $pokemon->slot ?: $loop->iteration) }} ↗
+					</button>
+				</td>
+
+				<!-- 3. Database Raw ID -->
+				<td class="py-1 px-1.5 text-center font-mono text-slate-500 text-[9px] align-middle">
+					{{ $pokemon->id }}
+				</td>
+				
+				<!-- 4. Thumbnail Image -->
+				<td class="py-1 px-1.5 text-center align-middle">
+					<img src="{{ $pokemon->image_path ?: asset('images/placeholder.png') }}" 
+						 alt="{{ $pokemon->name }}" 
+						 class="w-6 h-6 object-cover rounded border border-slate-700 mx-auto" 
+						 onerror="this.onerror=null; this.src='{{ asset('images/placeholder.png') }}';">
+				</td>
+				
+				<!-- 5. Name -->
+				<td class="py-1 px-2 font-bold text-white tracking-wide text-[11px] align-middle whitespace-nowrap">{{ $pokemon->name }}</td>
+				
+				<!-- 6. Main Species -->
+				<td class="py-1 px-2 text-indigo-300 font-semibold text-[10px] align-middle whitespace-nowrap">{{ $pokemon->species ?? '-' }}</td>
+				
+				<!-- 7. Evo Number -->
+				<td class="py-1 px-1.5 text-center font-mono text-slate-300 text-[10px] align-middle whitespace-nowrap">{{ $pokemon->evo_number ?? '-' }}</td>
+				
+				<!-- 8. Inspiration -->
+				<td class="py-1 px-2 text-slate-300 text-[10px] align-middle max-w-[140px] whitespace-normal break-words">{{ $pokemon->insp ?? '-' }}</td>
+				
+				<!-- 9. Type 1 -->
+				<td class="py-1 px-1.5 align-middle whitespace-nowrap">
+					<span class="inline-block px-1.5 py-0.2 rounded-full text-[8px] font-semibold uppercase tracking-wider border text-white"
+						  style="background-color: {{ ($typeMap[$pokemon->type1]->color_hex ?? '#64748b') }}20; border-color: {{ ($typeMap[$pokemon->type1]->color_hex ?? '#64748b') }}60; color: {{ $typeMap[$pokemon->type1]->color_hex ?? '#ffffff' }};">
+						{{ $pokemon->type1 }}
+					</span>
+				</td>
+				
+				<!-- 10. Type 2 -->
+				<td class="py-1 px-1.5 align-middle whitespace-nowrap">
+					@if($pokemon->type2)
+					@php $t2 = strtolower($pokemon->type2); @endphp
+					<span class="inline-block px-1.5 py-0.2 rounded-full text-[8px] font-semibold uppercase tracking-wider border {{ $types[$t2]['class'] ?? 'bg-slate-700 text-slate-300 border-slate-600' }}">
+						{{ $pokemon->type2 }}
+					</span>
+					@else
+					<span class="text-slate-600 text-[9px]">-</span>
+					@endif
+				</td>
+				
+				<!-- 11. UNTRUNCATED FULL DESCRIPTION (Expands row height as much as needed) -->
+				<td class="py-1.5 px-2.5 text-slate-300 text-[11px] leading-relaxed align-middle whitespace-normal break-words min-w-[240px]">
+					{{ $pokemon->description ?? '-' }}
+				</td>
+				
+				<!-- 12. Action Buttons -->
+				<td class="py-1 px-2 text-center whitespace-nowrap align-middle">
+					<div class="flex items-center justify-center gap-1">
+						<button type="button" @click="setEditData({{ json_encode($pokemon) }})" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded text-[9px] font-medium transition-all cursor-pointer">
+							Edit
+						</button>
+						
+						<form action="{{ route('pokemon.destroy', $pokemon->id) }}" method="POST" onsubmit="return confirm('Delete {{ $pokemon->name }} permanently?');">
+							@csrf
+							@method('DELETE')
+							<button type="submit" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-1.5 py-0.5 rounded text-[9px] font-medium transition-all cursor-pointer">
+								Delete
+							</button>
+						</form>
 					</div>
+				</td>
+			</tr>
+			@empty
+			<tr>
+				<td colspan="12" class="py-6 text-center text-slate-500 text-xs">
+					No Pokémon entries found. Click "+ Add Pokémon" to create one!
+				</td>
+			</tr>
+			@endforelse
+		</tbody>
+	</table>
+</div>
 					
 					<!-- GRID CARD VIEW MODE -->
 					<div x-cloak x-show="viewMode === 'grid'" class="p-4">
