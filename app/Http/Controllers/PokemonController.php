@@ -138,12 +138,19 @@
 		public function reorder(Request $request)
 		{
 			$validated = $request->validate([
-            'ids'   => 'required|array',
-            'ids.*' => 'integer|exists:pokemon,id',
+			'ids'          => 'required|array',
+			'ids.*'        => 'integer|exists:pokemon,id',
+			'current_page' => 'nullable|integer|min:1',
+			'per_page'     => 'nullable|integer|min:1',
 			]);
 			
+			// Calculate starting slot offset for current page (default 50 items per page)
+			$currentPage = $validated['current_page'] ?? 1;
+			$perPage     = $validated['per_page'] ?? 50;
+			$startSlot   = (($currentPage - 1) * $perPage) + 1;
+			
 			foreach ($validated['ids'] as $index => $id) {
-				Pokemon::where('id', $id)->update(['slot' => $index + 1]);
+				Pokemon::where('id', $id)->update(['slot' => $startSlot + $index]);
 			}
 			
 			return response()->json(['success' => true]);
@@ -154,14 +161,15 @@
 			$allowedTypes = Type::pluck('name')->implode(',');
 			
 			$validated = $request->validate([
-            'name'        => 'required|string|max:255',
-            'species'     => 'nullable|string|max:255',
-            'evo_number'  => 'nullable|integer|min:1',
-            'image'       => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:2048',
-            'insp'        => 'nullable|string',
-            'type1'       => 'required|in:' . $allowedTypes,
-            'type2'       => 'nullable|in:' . $allowedTypes,
-            'description' => 'nullable|string',
+			'name'        => 'required|string|max:255',
+			'species'     => 'nullable|string|max:255',
+			'evo_number'  => 'nullable|integer|min:1',
+			'image'       => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:2048',
+			'insp'        => 'nullable|string',
+			'type1'       => 'required|in:' . $allowedTypes,
+			'type2'       => 'nullable|in:' . $allowedTypes,
+			'description' => 'nullable|string',
+			'slot'        => 'nullable|integer|min:1', // <-- Added slot validation
 			]);
 			
 			if ($request->hasFile('image')) {
@@ -169,9 +177,17 @@
 				$validated['image_path'] = Storage::url($path);
 			}
 			
-			// Auto-assign next sequential slot number at the end of the list
 			$maxSlot = Pokemon::max('slot') ?? 0;
-			$validated['slot'] = $maxSlot + 1;
+			$targetSlot = $request->filled('slot') ? (int)$request->slot : ($maxSlot + 1);
+			
+			// If inserted into an existing slot position, shift subsequent items up by 1
+			if ($targetSlot <= $maxSlot) {
+				Pokemon::where('slot', '>=', $targetSlot)->increment('slot');
+				} else {
+				$targetSlot = $maxSlot + 1;
+			}
+			
+			$validated['slot'] = $targetSlot;
 			
 			Pokemon::create($validated);
 			
@@ -183,15 +199,16 @@
 			$allowedTypes = Type::pluck('name')->implode(',');
 			
 			$validated = $request->validate([
-            'name'        => 'required|string|max:255',
-            'species'     => 'nullable|string|max:255',
-            'evo_number'  => 'nullable|integer|min:1',
-            'image'       => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:2048',
-            'clear_image' => 'nullable|boolean',
-            'insp'        => 'nullable|string',
-            'type1'       => 'required|in:' . $allowedTypes,
-            'type2'       => 'nullable|in:' . $allowedTypes,
-            'description' => 'nullable|string',
+			'name'        => 'required|string|max:255',
+			'species'     => 'nullable|string|max:255',
+			'evo_number'  => 'nullable|integer|min:1',
+			'image'       => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:2048',
+			'clear_image' => 'nullable|boolean',
+			'insp'        => 'nullable|string',
+			'type1'       => 'required|in:' . $allowedTypes,
+			'type2'       => 'nullable|in:' . $allowedTypes,
+			'description' => 'nullable|string',
+			'slot'        => 'nullable|integer|min:1', // <-- Added slot validation
 			]);
 			
 			if ($request->boolean('clear_image')) {
@@ -209,6 +226,23 @@
 				}
 				$path = $request->file('image')->store('pokemon_images', 'public');
 				$validated['image_path'] = Storage::url($path);
+			}
+			
+			// Handle slot shift if slot was modified
+			if ($request->filled('slot')) {
+				$oldSlot = $pokemon->slot ?: $pokemon->id;
+				$newSlot = (int)$request->slot;
+				$maxSlot = Pokemon::max('slot') ?: Pokemon::count();
+				$newSlot = max(1, min($newSlot, $maxSlot));
+				
+				if ($oldSlot !== $newSlot) {
+					if ($newSlot < $oldSlot) {
+						Pokemon::whereBetween('slot', [$newSlot, $oldSlot - 1])->increment('slot');
+						} else {
+						Pokemon::whereBetween('slot', [$oldSlot + 1, $newSlot])->decrement('slot');
+					}
+					$validated['slot'] = $newSlot;
+				}
 			}
 			
 			$pokemon->update($validated);
@@ -239,33 +273,38 @@
 		public function export()
 		{
 			$fileName = 'pokemon_registry_' . date('Y-m-d') . '.csv';
-			$pokemons = Pokemon::all();
+			
+			// Fetch all Pokémon sorted by slot ascending
+			$pokemons = Pokemon::orderBy('slot', 'asc')->get();
 			
 			$headers = [
-            "Content-type"        => "text/csv",
-            "Content-Disposition" => "attachment; filename=$fileName",
-            "Pragma"              => "no-cache",
-            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-            "Expires"             => "0"
+			"Content-type"        => "text/csv",
+			"Content-Disposition" => "attachment; filename=$fileName",
+			"Pragma"              => "no-cache",
+			"Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+			"Expires"             => "0"
 			];
 			
 			$callback = function() use ($pokemons) {
 				$file = fopen('php://output', 'w');
-				fputcsv($file, ['ID', 'Image Path', 'Name', 'Species', 'Evo Number', 'Inspiration', 'Type 1', 'Type 2', 'Description']);
 				
-				foreach ($pokemons as $pokemon) {
+				// CSV Header Row
+				fputcsv($file, ['Slot', 'Image Path', 'Name', 'Species', 'Evo Number', 'Inspiration', 'Type 1', 'Type 2', 'Description']);
+				
+				foreach ($pokemons as $index => $pokemon) {
 					fputcsv($file, [
-                    $pokemon->id,
-                    $pokemon->image_path ?? '',
-                    $pokemon->name,
-                    $pokemon->species ?? '',
-                    $pokemon->evo_number ?? '',
-                    $pokemon->insp ?? '',
-                    $pokemon->type1,
-                    $pokemon->type2 ?? '',
-                    $pokemon->description ?? ''
+					$pokemon->slot ?? ($index + 1), // Exports current custom slot (or fallback sequence)
+					$pokemon->image_path ?? '',
+					$pokemon->name,
+					$pokemon->species ?? '',
+					$pokemon->evo_number ?? '',
+					$pokemon->insp ?? '',
+					$pokemon->type1,
+					$pokemon->type2 ?? '',
+					$pokemon->description ?? ''
 					]);
 				}
+				
 				fclose($file);
 			};
 			
@@ -354,4 +393,4 @@
 			
 			return response()->json(['success' => true]);
 		}
-	}	
+	}					
